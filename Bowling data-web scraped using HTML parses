@@ -1,0 +1,60 @@
+# Import the necessary libraries
+import requests
+from bs4 import BeautifulSoup
+
+# Define the base URL and the initial page URL
+base_url = 'https://stats.espncricinfo.com'
+url = base_url + '/ci/engine/stats/index.html?class=3;orderby=start;orderbyad=reverse;team=7;template=results;type=bowling;view=innings'
+
+# Initialize the page number
+page_num = 1
+
+# Start a loop that will run until there are no more pages to scrape
+while True:
+    # Get the HTML content of the page
+    page = requests.get(url)
+    
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(page.content, 'html.parser')
+    
+    # Find the table element that contains the data we want to extract
+    table = soup.select_one('#ciHomeContentlhs > div.pnl650M > table:nth-child(5)')
+
+    # Check if the table exists
+    if table is not None:
+        # If this is the first page, extract the headers of the table and print them
+        if page_num == 1:
+            headers = [th.text.strip() for th in table.thead.find_all('th')]
+            print(', '.join(headers))
+        
+        # Loop through the rows of the table and extract the data for each player
+        for row in table.tbody.find_all('tr'):
+            columns = row.find_all('td')
+            if len(columns) > 0:
+                player = columns[0].text.strip()
+                overs = columns[1].text.strip()
+                mdns = columns[2].text.strip()
+                runs = columns[3].text.strip()
+                wkts = columns[4].text.strip()
+                econ = columns[5].text.strip()
+                inns_num = columns[6].text.strip()
+                opposition = columns[8].text.strip()
+                ground = columns[9].text.strip()
+                start_date = columns[10].text.strip()
+                
+                # Print the data for each player in a comma-separated format
+                print(f'{player}, {overs}, {mdns}, {runs}, {wkts}, {econ}, {inns_num}, {opposition}, {ground}, {start_date}')
+
+        # Check if there is a next page by finding the 'Next' button on the page
+        next_page_link = soup.select_one('.PaginationLink')
+        if next_page_link is not None:
+            # If there is a next page, increment the page number and update the URL to the next page
+            page_num += 1
+            url = base_url + next_page_link['href']
+        else:
+            # If there is no next page, break out of the loop
+            break
+    else:
+        # If the table cannot be found, print an error message and break out of the loop
+        print('Table not found.')
+        break
